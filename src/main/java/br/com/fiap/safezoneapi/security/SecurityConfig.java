@@ -1,5 +1,7 @@
 package br.com.fiap.safezoneapi.security;
 
+import static org.springframework.boot.autoconfigure.security.servlet.PathRequest.toH2Console;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import br.com.fiap.safezoneapi.config.JwtFilter;
 import br.com.fiap.safezoneapi.service.CustomUserDetailsService;
@@ -28,10 +31,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf
+                    .ignoringRequestMatchers(toH2Console()) // Ignora CSRF para o H2 Console
+                )
+                .headers(headers -> headers.frameOptions(frame -> frame.disable())) // Permite iframe para H2
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated())
+                    .requestMatchers(toH2Console()).permitAll() // Para o H2
+                    .requestMatchers(new AntPathRequestMatcher("/api/auth/**")).permitAll() // Login, register, etc
+                    .requestMatchers(new AntPathRequestMatcher("/swagger-ui/**")).permitAll()
+                    .requestMatchers(new AntPathRequestMatcher("/v3/api-docs/**")).permitAll()
+                    .anyRequest().authenticated()
+                )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
