@@ -1,10 +1,11 @@
 package br.com.fiap.safezoneapi.repository;
 
-import br.com.fiap.safezoneapi.model.Sensor;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import br.com.fiap.safezoneapi.model.Sensor;
+
 public interface SensorRepository extends JpaRepository<Sensor, Long> {
-    List<Sensor> findByRegiaoId(Long regiaoId); // Ex: pegar sensores de uma região
+    List<Sensor> findByRegiaoId(Long regiaoId);
 }

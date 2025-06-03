@@ -1,41 +1,55 @@
 package br.com.fiap.safezoneapi.controller;
 
-import br.com.fiap.safezoneapi.model.Sensor;
-import br.com.fiap.safezoneapi.repository.SensorRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import br.com.fiap.safezoneapi.model.Sensor;
+import br.com.fiap.safezoneapi.service.SensorService;
 
 @RestController
 @RequestMapping("/api/sensores")
 public class SensorController {
 
-    private final SensorRepository repository;
+    private final SensorService sensorService;
 
-    public SensorController(SensorRepository repository) {
-        this.repository = repository;
+    public SensorController(SensorService sensorService) {
+        this.sensorService = sensorService;
     }
 
     @GetMapping
     public List<Sensor> listar() {
-        return repository.findAll();
+        return sensorService.findAll();
     }
 
     @GetMapping("/regiao/{regiaoId}")
     public List<Sensor> listarPorRegiao(@PathVariable Long regiaoId) {
-        return repository.findByRegiaoId(regiaoId);
+        return sensorService.findByRegiaoId(regiaoId);
     }
 
     @PostMapping
     public ResponseEntity<Sensor> cadastrar(@RequestBody Sensor sensor) {
-        return ResponseEntity.ok(repository.save(sensor));
+        return ResponseEntity.ok(sensorService.save(sensor));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
-        repository.deleteById(id);
+        if (!sensorService.existsById(id))
+            return ResponseEntity.notFound().build();
+        sensorService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Sensor> atualizar(@PathVariable Long id, @RequestBody Sensor sensor) {
+        return ResponseEntity.ok(sensorService.update(id, sensor));
     }
 }
