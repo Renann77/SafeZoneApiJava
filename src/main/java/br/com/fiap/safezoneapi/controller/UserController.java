@@ -19,10 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.fiap.safezoneapi.model.User;
 import br.com.fiap.safezoneapi.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "Usuários", description = "Endpoints para gerenciar usuários do sistema")
 public class UserController {
 
     private final UserService userService;
@@ -31,14 +37,19 @@ public class UserController {
         this.userService = userService;
     }
 
-    // Criar novo usuário
+    @Operation(summary = "Criar novo usuário", responses = {
+            @ApiResponse(responseCode = "200", description = "Usuário criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content(schema = @Schema()))
+    })
     @PostMapping
     public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
         User savedUser = userService.save(user);
         return ResponseEntity.ok(savedUser);
     }
 
-    // Listar usuários com paginação, ordenação e filtro opcional por username
+    @Operation(summary = "Listar usuários com paginação e filtro por username", description = "Você pode filtrar por username e ordenar por qualquer campo, como id, username, etc.", responses = {
+            @ApiResponse(responseCode = "200", description = "Lista de usuários")
+    })
     @GetMapping
     public ResponseEntity<Page<User>> getUsers(
             @RequestParam Optional<String> username,
@@ -56,45 +67,44 @@ public class UserController {
 
         Pageable pageable = PageRequest.of(currentPage, pageSize, Sort.by(sortDirection, sortField));
 
-        Page<User> usersPage;
-
-        if (username.isPresent()) {
-            usersPage = userService.findByUsernameContaining(username.get(), pageable);
-        } else {
-            usersPage = userService.findAll(pageable);
-        }
+        Page<User> usersPage = username
+                .map(u -> userService.findByUsernameContaining(u, pageable))
+                .orElseGet(() -> userService.findAll(pageable));
 
         return ResponseEntity.ok(usersPage);
     }
 
-    // Buscar usuário por id
+    @Operation(summary = "Buscar usuário por ID", responses = {
+            @ApiResponse(responseCode = "200", description = "Usuário encontrado"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
+    })
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        Optional<User> userOpt = userService.findById(id);
-        return userOpt.map(ResponseEntity::ok)
+        return userService.findById(id)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Atualizar usuário
+    @Operation(summary = "Atualizar usuário por ID", responses = {
+            @ApiResponse(responseCode = "200", description = "Usuário atualizado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody User updatedUser) {
-        Optional<User> userOpt = userService.findById(id);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        User user = userOpt.get();
-        user.setUsername(updatedUser.getUsername());
-        // Só atualiza a senha se tiver vindo no body
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
-            user.setPassword(updatedUser.getPassword());
-        }
-
-        User savedUser = userService.save(user);
-        return ResponseEntity.ok(savedUser);
+        return userService.findById(id).map(user -> {
+            user.setUsername(updatedUser.getUsername());
+            if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+                user.setPassword(updatedUser.getPassword());
+            }
+            User savedUser = userService.save(user);
+            return ResponseEntity.ok(savedUser);
+        }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Deletar usuário
+    @Operation(summary = "Deletar usuário por ID", responses = {
+            @ApiResponse(responseCode = "204", description = "Usuário deletado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         Optional<User> userOpt = userService.findById(id);
@@ -104,5 +114,6 @@ public class UserController {
 
         userService.deleteById(id);
         return ResponseEntity.noContent().build();
+
     }
 }
