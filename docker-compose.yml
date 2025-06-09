@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  db:
+    build:
+      context: ./docker/db
+    container_name: safezone_db
+    environment:
+      - POSTGRES_USER=safezone_user
+      - POSTGRES_PASSWORD=safezone_pass
+      - POSTGRES_DB=safezone_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - safezone_network
+
+  app:
+    build: ./SafeZone.API
+    container_name: safezone_api
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    environment:
+      - ConnectionStrings__Postgres=Host=db;Port=5432;Database=safezone_db;Username=safezone_user;Password=safezone_pass
+    networks:
+      - safezone_network
+
+volumes:
+  postgres_data:
+
+networks:
+  safezone_network:
